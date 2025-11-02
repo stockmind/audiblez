@@ -107,7 +107,8 @@ def main(file_path, voice, pick_manually, speed, output_folder='.',
     stats = SimpleNamespace(
         total_chars=sum(map(len, texts)),
         processed_chars=0,
-        chars_per_sec=500 if torch.cuda.is_available() else 50)
+        chars_per_sec=500 if torch.cuda.is_available() else 50,
+        dynamic_chars_per_sec=None)
     print('Started at:', time.strftime('%H:%M:%S'))
     print(f'Total characters: {stats.total_chars:,}')
     print('Total words:', len(' '.join(texts).split()))
@@ -149,6 +150,19 @@ def main(file_path, voice, pick_manually, speed, output_folder='.',
             print('Chapter written to', chapter_wav_path)
             if post_event: post_event('CORE_CHAPTER_FINISHED', chapter_index=chapter.chapter_index)
             print(f'Chapter {i} read in {delta_seconds:.2f} seconds ({chars_per_sec:.0f} characters per second)')
+
+            # update dynamic average speed
+            if stats.dynamic_chars_per_sec is None:
+                stats.dynamic_chars_per_sec = chars_per_sec
+            else:
+                # Use a weighted running average so ETA stays stable and reliable
+                total_prev = stats.processed_chars
+                total_now = total_prev + len(text)
+                stats.dynamic_chars_per_sec = (
+                    (stats.dynamic_chars_per_sec * total_prev + chars_per_sec * len(text))
+                    / total_now
+                )
+            stats.chars_per_sec = stats.dynamic_chars_per_sec
         else:
             print(f'Warning: No audio generated for chapter {i}')
             chapter_wav_files.remove(chapter_wav_path)
@@ -205,7 +219,7 @@ def gen_audio_segments(pipeline, text, voice, speed, stats=None, max_sentences=N
             stats.progress = stats.processed_chars * 100 // stats.total_chars
             stats.eta = strfdelta((stats.total_chars - stats.processed_chars) / stats.chars_per_sec)
             if post_event: post_event('CORE_PROGRESS', stats=stats)
-            print(f'Estimated time remaining: {stats.eta}')
+            print(f'Estimated time remaining (assuming {stats.chars_per_sec} chars/sec): {stats.eta}')
             print('Progress:', f'{stats.progress}%\n')
     return audio_segments
 
