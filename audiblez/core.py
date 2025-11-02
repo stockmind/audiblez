@@ -113,7 +113,7 @@ def main(file_path, voice, pick_manually, speed, output_folder='.',
     print(f'Total characters: {stats.total_chars:,}')
     print('Total words:', len(' '.join(texts).split()))
     eta = strfdelta((stats.total_chars - stats.processed_chars) / stats.chars_per_sec)
-    print(f'Estimated time remaining (assuming {stats.chars_per_sec} chars/sec): {eta}')
+    print(f'Estimated time remaining (assuming {int(stats.chars_per_sec)} chars/sec): {eta}')
     set_espeak_library()
     pipeline = KPipeline(lang_code=voice[0])  # a for american or b for british etc.
 
@@ -219,7 +219,7 @@ def gen_audio_segments(pipeline, text, voice, speed, stats=None, max_sentences=N
             stats.progress = stats.processed_chars * 100 // stats.total_chars
             stats.eta = strfdelta((stats.total_chars - stats.processed_chars) / stats.chars_per_sec)
             if post_event: post_event('CORE_PROGRESS', stats=stats)
-            print(f'Estimated time remaining (assuming {stats.chars_per_sec} chars/sec): {stats.eta}')
+            print(f'Estimated time remaining (assuming {int(stats.chars_per_sec)} chars/sec): {stats.eta}')
             print('Progress:', f'{stats.progress}%\n')
     return audio_segments
 
