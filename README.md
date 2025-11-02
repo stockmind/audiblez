@@ -18,7 +18,7 @@ It currently supports these languages: 🇺🇸 🇬🇧 🇪🇸 🇫🇷 🇮�
 
 On a Google Colab's T4 GPU via Cuda, **it takes about 5 minutes to convert "Animal's Farm" by Orwell** (which is about 160,000 characters) to audiobook, at a rate of about 600 characters per second.
 
-On my M2 MacBook Pro, on CPU, it takes about 1 hour, at a rate of about 60 characters per second.
+On my M3 MacBook Pro, using MLX-audio, it takes about 18 minutes, at a rate of about 180 characters per second.
 
 
 ## How to install the Command Line tool

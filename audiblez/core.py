@@ -3,6 +3,7 @@
 # audiblez - A program to convert e-books into audiobooks using
 # Kokoro-82M model for high-quality text-to-speech synthesis.
 # by Claudio Santini 2025 - https://claudio.uk
+
 import os
 import traceback
 from glob import glob
@@ -29,6 +30,18 @@ from pick import pick
 
 sample_rate = 24000
 
+# Optional mlx-audio integration (Apple Silicon acceleration)
+USE_MLX_AUDIO = False
+if platform.system() == "Darwin":
+    try:
+        import mlx_audio
+        from mlx_audio.tts.models.kokoro import KokoroPipeline
+        from mlx_audio.tts.utils import load_model
+        USE_MLX_AUDIO = True
+        print("✅ Using mlx-audio for TTS on macOS (Apple Silicon optimization)")
+    except ImportError:
+        print("⚠️ mlx-audio not found, falling back to Kokoro.")
+
 
 def load_spacy():
     if not spacy.util.is_package("xx_ent_wiki_sm"):
@@ -39,7 +52,6 @@ def load_spacy():
 def set_espeak_library():
     """Find the espeak library path"""
     try:
-
         if os.environ.get('ESPEAK_LIBRARY'):
             library = os.environ['ESPEAK_LIBRARY']
         elif platform.system() == 'Darwin':
@@ -77,7 +89,6 @@ def main(file_path, voice, pick_manually, speed, output_folder='.',
         Path(output_folder).mkdir(parents=True, exist_ok=True)
 
     filename = Path(file_path).name
-
     extension = '.epub'
     book = epub.read_epub(file_path)
     meta_title = book.get_metadata('DC', 'title')
@@ -115,7 +126,19 @@ def main(file_path, voice, pick_manually, speed, output_folder='.',
     eta = strfdelta((stats.total_chars - stats.processed_chars) / stats.chars_per_sec)
     print(f'Estimated time remaining (assuming {int(stats.chars_per_sec)} chars/sec): {eta}')
     set_espeak_library()
-    pipeline = KPipeline(lang_code=voice[0])  # a for american or b for british etc.
+
+    # Use mlx-audio on macOS if available, otherwise Kokoro
+    if USE_MLX_AUDIO:
+        try:
+            model_id = 'prince-canuma/Kokoro-82M'
+            model = load_model(model_id)
+            pipeline = KokoroPipeline(lang_code=voice[0], model=model, repo_id=model_id)
+        except Exception as e:
+            print("❌ Failed to initialize mlx-audio:", e)
+            print("Falling back to Kokoro...")
+            pipeline = KPipeline(lang_code=voice[0])
+    else:
+        pipeline = KPipeline(lang_code=voice[0])
 
     chapter_wav_files = []
     for i, chapter in enumerate(selected_chapters, start=1):
@@ -142,7 +165,8 @@ def main(file_path, voice, pick_manually, speed, output_folder='.',
         audio_segments = gen_audio_segments(
             pipeline, text, voice, speed, stats, post_event=post_event, max_sentences=max_sentences)
         if audio_segments:
-            final_audio = np.concatenate(audio_segments)
+            flattened_segments = [seg.squeeze() for seg in audio_segments]  # Remove singleton dimensions
+            final_audio = np.concatenate(flattened_segments)
             soundfile.write(chapter_wav_path, final_audio, sample_rate)
             end_time = time.time()
             delta_seconds = end_time - start_time
