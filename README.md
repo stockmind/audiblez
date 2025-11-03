@@ -27,19 +27,28 @@ If you have Python 3 on your computer, you can install it with pip.
 You also need `espeak-ng` and `ffmpeg` installed on your machine:
 
 ```bash
-sudo apt install ffmpeg espeak-ng                   # on Ubuntu/Debian 🐧
-pip install audiblez
+# make sure to have `uv` installed
+sudo apt install ffmpeg espeak-ng                    # on Ubuntu/Debian 🐧
+git clone https://github.com/stockmind/audiblez.git
+cd audiblez
+uv venv --seed -p 3.12
+source .venv/bin/activate
+uv pip install -r pyproject.toml
 ```
 
 ```bash
-brew install ffmpeg espeak-ng                       # on Mac 🍏
-pip install audiblez
+brew install ffmpeg espeak-ng uv                       # on Mac 🍏
+git clone https://github.com/stockmind/audiblez.git
+cd audiblez
+uv venv --seed -p 3.12
+source .venv/bin/activate
+uv pip install -r pyproject.toml
 ```
 
 Then you can convert an .epub directly with:
 
-```
-audiblez book.epub -v af_sky
+```bash
+python audiblez/cli.py "<your-book-here>.epub" -v af_heart
 ```
 
 It will first create a bunch of `book_chapter_1.wav`, `book_chapter_2.wav`, etc. files in the same directory,
